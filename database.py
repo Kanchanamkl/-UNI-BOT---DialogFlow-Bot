@@ -101,6 +101,75 @@ class Database:
             # Already a day name (monday, tuesday, etc.)
             return day_query.lower()
 
+    def get_course_resources(self, course_name, week_number=None):
+        """
+        Get course resources/links by course name and optionally by week
+        
+        Args:
+            course_name: Name of the course
+            week_number: Optional week number (1-12)
+        
+        Returns:
+            List of resource dictionaries
+        """
+        try:
+            cursor = self.connection.cursor(dictionary=True)
+            
+            if week_number:
+                query = """
+                    SELECT * FROM course_resources 
+                    WHERE LOWER(course_name) LIKE LOWER(%s) 
+                    AND week_number = %s
+                    ORDER BY week_number, resource_order
+                """
+                cursor.execute(query, (f"%{course_name}%", week_number))
+            else:
+                query = """
+                    SELECT * FROM course_resources 
+                    WHERE LOWER(course_name) LIKE LOWER(%s)
+                    ORDER BY week_number, resource_order
+                """
+                cursor.execute(query, (f"%{course_name}%",))
+            
+            results = cursor.fetchall()
+            cursor.close()
+            return results
+            
+        except Exception as e:
+            print(f"Error fetching course resources: {e}")
+            return []
+    
+    def get_all_courses(self):
+        """Get list of all available courses"""
+        try:
+            cursor = self.connection.cursor(dictionary=True)
+            query = "SELECT DISTINCT course_name, course_code FROM course_resources ORDER BY course_name"
+            cursor.execute(query)
+            results = cursor.fetchall()
+            cursor.close()
+            return results
+        except Exception as e:
+            print(f"Error fetching courses: {e}")
+            return []
+    
+    def get_weeks_for_course(self, course_name):
+        """Get available weeks for a specific course"""
+        try:
+            cursor = self.connection.cursor(dictionary=True)
+            query = """
+                SELECT DISTINCT week_number 
+                FROM course_resources 
+                WHERE LOWER(course_name) LIKE LOWER(%s)
+                ORDER BY week_number
+            """
+            cursor.execute(query, (f"%{course_name}%",))
+            results = cursor.fetchall()
+            cursor.close()
+            return [row['week_number'] for row in results]
+        except Exception as e:
+            print(f"Error fetching weeks: {e}")
+            return []
+
 # Test function
 if __name__ == "__main__":
     db = Database()
